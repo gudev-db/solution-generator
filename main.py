@@ -15,7 +15,7 @@ st.set_page_config(page_title="Gerador de Propostas para Editais", page_icon="�
 
 # Título do aplicativo
 st.title("🚀 Gerador de Propostas para Editais de Solução Inovadora")
-st.markdown("Descreva sua solução e encontre editais alinhados para submeter sua proposta")
+st.markdown("Encontre editais alinhados com sua solução OU gere uma proposta completa para um edital específico")
 
 # Configuração do Gemini API
 gemini_api_key = st.secrets.get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY"))
@@ -204,136 +204,369 @@ if gemini_api_key:
         )
         return response.text
 
-    # ... (outras funções de geração mantidas como antes)
+    def gerar_objetivos_metodologia(texto_edital, palavras_chave, conteudo_anterior, descricao_solucao):
+        prompt = f'''
+        Com base no edital, no conteúdo já desenvolvido e na solução do usuário, elabore os OBJETIVOS e a METODOLOGIA.
 
-    # Interface do usuário
-    with st.sidebar:
-        st.header("📋 Configurações da Proposta")
-        
-        # Upload do edital
-        uploaded_file = st.file_uploader("Faça upload do edital (PDF, DOCX ou TXT):", 
-                                        type=["pdf", "docx", "txt"])
-        
-        area_atuacao = st.selectbox("Área de Atuação Principal:", [
-            "Tecnologia da Informação", "Saúde", "Educação", "Agronegócio", 
-            "Energia", "Meio Ambiente", "Mobilidade Urbana", "Indústria 4.0",
-            "Segurança", "Turismo", "Outra"
-        ])
-        
-        if area_atuacao == "Outra":
-            area_atuacao = st.text_input("Especifique a área de atuação:")
-        
-        palavras_chave = st.text_area("Palavras-chave (separadas por vírgula):", 
-                                     "inovação, tecnologia, sustentabilidade, eficiência")
-        
-        diretrizes_usuario = st.text_area("Diretrizes ou Ideias Preliminares:", 
-                                         "Ex: Focar em soluções de IoT para monitoramento remoto. Incluir parceria com universidades. Considerar baixo custo de implementação.")
-        
-        st.divider()
-        
-        # Opção para inserir texto manualmente
-        texto_manual = st.text_area("Ou cole o texto do edital manualmente:", height=200)
-        
-        st.divider()
-        gerar_proposta = st.button("🚀 Gerar Proposta Completa", type="primary", use_container_width=True)
+        TEXTO DO EDITAL:
+        {texto_edital[:3000]}
 
-    # Área principal - Descrição da Solução do Usuário
-    st.header("💡 Descreva Sua Solução Inovadora")
-    
-    with st.expander("Preencha os detalhes da sua solução", expanded=True):
-        col1, col2 = st.columns(2)
+        SOLUÇÃO DO USUÁRIO:
+        {descricao_solucao}
+
+        PALAVRAS-CHAVE: {palavras_chave}
+        CONTEÚDO JÁ DESENVOLVIDO: {conteudo_anterior}
+
+        OBJETIVOS:
+        - Objetivo geral [1 objetivo principal]
+        - Objetivos específicos [3-5 objetivos mensuráveis]
+
+        METODOLOGIA:
+        - Descrição detalhada da solução proposta
+        - Métodos, técnicas e abordagens
+        - Fluxo de desenvolvimento e implementação
+        '''
         
-        with col1:
-            nome_solucao = st.text_input("Nome da Solução:", placeholder="Ex: Sistema IoT de Monitoramento Agrícola")
-            area_solucao = st.selectbox("Área de Aplicação:", [
-                "Agricultura", "Saúde", "Educação", "Energia", "Meio Ambiente", 
-                "Mobilidade", "Indústria", "Tecnologia", "Outra"
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=prompt
+        )
+        return response.text
+
+    def gerar_cronograma(texto_edital, palavras_chave, conteudo_anterior):
+        prompt = f'''
+        Com base no edital e no conteúdo já desenvolvido, elabore um CRONOGRAMA DE IMPLEMENTAÇÃO detalhado.
+
+        TEXTO DO EDITAL:
+        {texto_edital[:3000]}
+
+        PALAVRAS-CHAVE: {palavras_chave}
+        CONTEÚDO JÁ DESENVOLVIDO: {conteudo_anterior}
+
+        ESTRUTURE O CRONOGRAMA EM FASES:
+        1. Pré-implantação (preparação, planejamento)
+        2. Implantação (desenvolvimento, execução)
+        3. Pós-implantação (testes, ajustes, operação)
+
+        Para cada fase, inclua:
+        - Atividades principais
+        - Marcos e entregáveis
+        - Duração estimada (semanas/meses)
+        '''
+        
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=prompt
+        )
+        return response.text
+
+    def gerar_plano_negocios(texto_edital, palavras_chave, conteudo_anterior, descricao_solucao):
+        prompt = f'''
+        Com base no edital, no conteúdo já desenvolvido e na solução do usuário, elabore um PLANO DE NEGÓCIOS.
+
+        TEXTO DO EDITAL:
+        {texto_edital[:3000]}
+
+        SOLUÇÃO DO USUÁRIO:
+        {descricao_solucao}
+
+        PALAVRAS-CHAVE: {palavras_chave}
+        CONTEÚDO JÁ DESENVOLVIDO: {conteudo_anterior}
+
+        ESTRUTURE O PLANO DE NEGÓCIOS COM:
+        1. Modelo de negócio proposto
+        2. Análise de mercado e concorrência
+        3. Projeção financeira (investimento, custos, receitas)
+        4. Estratégia de sustentabilidade
+        '''
+        
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=prompt
+        )
+        return response.text
+
+    def gerar_recursos_impactos(texto_edital, palavras_chave, conteudo_anterior, descricao_solucao):
+        prompt = f'''
+        Com base no edital, no conteúdo já desenvolvido e na solução do usuário, elabore a seção de RECURSOS NECESSÁRIOS e IMPACTOS ESPERADOS.
+
+        TEXTO DO EDITAL:
+        {texto_edital[:3000]}
+
+        SOLUÇÃO DO USUÁRIO:
+        {descricao_solucao}
+
+        PALAVRAS-CHAVE: {palavras_chave}
+        CONTEÚDO JÁ DESENVOLVIDO: {conteudo_anterior}
+
+        RECURSOS NECESSÁRIOS:
+        - Recursos humanos (equipe, competências)
+        - Infraestrutura e equipamentos
+        - Tecnologias e ferramentas
+        - Parcerias estratégicas
+
+        IMPACTOS ESPERADOS:
+        - Impactos técnicos, econômicos e sociais
+        - Benefícios para os stakeholders
+        - Potencial de escalabilidade e replicabilidade
+        '''
+        
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=prompt
+        )
+        return response.text
+
+    def gerar_conclusao(texto_edital, palavras_chave, conteudo_anterior, descricao_solucao):
+        prompt = f'''
+        Com base no edital, no conteúdo já desenvolvido e na solução do usuário, elabore uma CONCLUSÃO persuasiva.
+
+        TEXTO DO EDITAL:
+        {texto_edital[:3000]}
+
+        SOLUÇÃO DO USUÁRIO:
+        {descricao_solucao}
+
+        PALAVRAS-CHAVE: {palavras_chave}
+        CONTEÚDO JÁ DESENVOLVIDO: {conteudo_anterior}
+
+        A conclusão deve:
+        - Sintetizar os pontos principais da proposta
+        - Reafirmar o potencial de sucesso e inovação
+        - Destacar os benefícios e impactos esperados
+        - Finalizar com uma chamada para ação convincente
+        '''
+        
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=prompt
+        )
+        return response.text
+
+    # Abas separadas para cada funcionalidade
+    tab1, tab2 = st.tabs(["🔍 Buscar Editais", "📝 Gerar Proposta"])
+
+    with tab1:
+        st.header("🔍 Buscar Editais Alinhados")
+        st.markdown("Descreva sua solução para encontrar editais que sejam adequados")
+        
+        with st.form("form_busca_editais"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                nome_solucao = st.text_input("Nome da Solução:", placeholder="Ex: Sistema IoT de Monitoramento Agrícola")
+                area_solucao = st.selectbox("Área de Aplicação:", [
+                    "Agricultura", "Saúde", "Educação", "Energia", "Meio Ambiente", 
+                    "Mobilidade", "Indústria", "Tecnologia", "Outra"
+                ])
+                problema_resolve = st.text_area("Problema que Resolve:", placeholder="Descreva o problema que sua solução aborda")
+            
+            with col2:
+                como_funciona = st.text_area("Como Funciona:", placeholder="Explique brevemente como sua solução funciona")
+                inovacao_solucao = st.text_area("O que tem de Inovador:", placeholder="Descreva os aspectos inovadores")
+                beneficios = st.text_area("Benefícios e Impactos:", placeholder="Quais benefícios e impactos sua solução traz")
+            
+            palavras_chave_busca = st.text_input("Palavras-chave para busca:", "inovação, tecnologia, sustentabilidade")
+            
+            submitted_busca = st.form_submit_button("🔍 Buscar Editais", type="primary")
+        
+        if submitted_busca and gemini_api_key:
+            with st.spinner("Buscando editais alinhados com sua solução..."):
+                descricao_completa = f"""
+                Busque editais recentes e em aberto no ano de 2025
+                NOME: {nome_solucao}
+                ÁREA: {area_solucao}
+                PROBLEMA RESOLVIDO: {problema_resolve}
+                COMO FUNCIONA: {como_funciona}
+                INOVAÇÃO: {inovacao_solucao}
+                BENEFÍCIOS: {beneficios}
+                """
+                
+                resultado_busca = buscar_editais_com_web_search(
+                    descricao_completa, 
+                    palavras_chave_busca, 
+                    area_solucao, 
+                    inovacao_solucao
+                )
+                
+                st.success("✅ Busca de editais concluída!")
+                st.subheader("📋 Editais Encontrados")
+                st.markdown(resultado_busca)
+
+    with tab2:
+        st.header("📝 Gerar Proposta para Edital")
+        st.markdown("Faça upload de um edital específico para gerar uma proposta completa")
+        
+        with st.form("form_gerar_proposta"):
+            # Upload do edital
+            uploaded_file = st.file_uploader("Faça upload do edital (PDF, DOCX ou TXT):", 
+                                            type=["pdf", "docx", "txt"])
+            
+            area_atuacao = st.selectbox("Área de Atuação Principal:", [
+                "Tecnologia da Informação", "Saúde", "Educação", "Agronegócio", 
+                "Energia", "Meio Ambiente", "Mobilidade Urbana", "Indústria 4.0",
+                "Segurança", "Turismo", "Outra"
             ])
-            problema_resolve = st.text_area("Problema que Resolve:", placeholder="Descreva o problema que sua solução aborda")
+            
+            if area_atuacao == "Outra":
+                area_atuacao = st.text_input("Especifique a área de atuação:")
+            
+            palavras_chave = st.text_area("Palavras-chave (separadas por vírgula):", 
+                                         "inovação, tecnologia, sustentabilidade, eficiência")
+            
+            diretrizes_usuario = st.text_area("Diretrizes ou Ideias Preliminares:", 
+                                             "Ex: Focar em soluções de IoT para monitoramento remoto. Incluir parceria com universidades. Considerar baixo custo de implementação.")
+            
+            # Opção para inserir texto manualmente
+            texto_manual = st.text_area("Ou cole o texto do edital manualmente:", height=200)
+            
+            submitted_proposta = st.form_submit_button("🚀 Gerar Proposta Completa", type="primary")
         
-        with col2:
-            como_funciona = st.text_area("Como Funciona:", placeholder="Explique brevemente como sua solução funciona")
-            inovacao_solucao = st.text_area("O que tem de Inovador:", placeholder="Descreva os aspectos inovadores")
-            beneficios = st.text_area("Benefícios e Impactos:", placeholder="Quais benefícios e impactos sua solução traz")
-        
-        # Botão para buscar editais alinhados
-        buscar_editais = st.button("🔍 Buscar Editais Alinhados", type="secondary")
-
-    # Processar busca de editais
-    if buscar_editais and gemini_api_key:
-        with st.spinner("Buscando editais alinhados com sua solução..."):
-            descricao_completa = f"""
-            NOME: {nome_solucao}
-            ÁREA: {area_solucao}
-            PROBLEMA RESOLVIDO: {problema_resolve}
-            COMO FUNCIONA: {como_funciona}
-            INOVAÇÃO: {inovacao_solucao}
-            BENEFÍCIOS: {beneficios}
+        if submitted_proposta and gemini_api_key:
+            # Obter texto do edital
+            texto_edital = ""
+            
+            if uploaded_file is not None:
+                with st.spinner("Processando arquivo do edital..."):
+                    texto_edital = extract_text_from_file(uploaded_file)
+                    if not texto_edital.strip():
+                        st.error("Não foi possível extrair texto do arquivo. Tente outro formato ou use a opção de texto manual.")
+                        st.stop()
+            elif texto_manual.strip():
+                texto_edital = texto_manual
+            else:
+                st.error("Por favor, faça upload de um edital ou cole o texto manualmente.")
+                st.stop()
+            
+            # Gerar proposta em etapas
+            todas_etapas = {}
+            
+            with st.status("Gerando proposta passo a passo...", expanded=True) as status:
+                # Preparar descrição da solução do usuário (simplificada para esta aba)
+                descricao_solucao = "Solução customizada baseada nas diretrizes do usuário"
+                
+                # Etapa 1: Título e Resumo
+                st.write("🎯 Gerando título e resumo executivo...")
+                titulo_resumo = gerar_titulo_resumo(texto_edital, palavras_chave, diretrizes_usuario, area_atuacao, descricao_solucao)
+                todas_etapas['titulo_resumo'] = titulo_resumo
+                
+                # Extrair título para usar no nome do documento
+                titulo_match = re.search(r'TÍTULO:\s*(.+)', titulo_resumo, re.IGNORECASE)
+                titulo_proposta = titulo_match.group(1).strip() if titulo_match else f"Proposta para Edital de Inovação em {area_atuacao}"
+                
+                # Etapa 2: Justificativa
+                st.write("📝 Desenvolvendo justificativa e inovação...")
+                justificativa = gerar_justificativa(texto_edital, palavras_chave, titulo_resumo, descricao_solucao, "Inovação baseada nas diretrizes fornecidas")
+                todas_etapas['justificativa'] = justificativa
+                
+                # Etapa 3: Objetivos e Metodologia
+                st.write("🎯 Definindo objetivos e metodologia...")
+                conteudo_anterior = f"{titulo_resumo}\n\n{justificativa}"
+                objetivos_metodologia = gerar_objetivos_metodologia(texto_edital, palavras_chave, conteudo_anterior, descricao_solucao)
+                todas_etapas['objetivos_metodologia'] = objetivos_metodologia
+                
+                # Etapa 4: Cronograma
+                st.write("📅 Elaborando cronograma de implementação...")
+                conteudo_anterior = f"{conteudo_anterior}\n\n{objetivos_metodologia}"
+                cronograma = gerar_cronograma(texto_edital, palavras_chave, conteudo_anterior)
+                todas_etapas['cronograma'] = cronograma
+                
+                # Etapa 5: Plano de Negócios
+                st.write("💼 Desenvolvendo plano de negócios...")
+                conteudo_anterior = f"{conteudo_anterior}\n\n{cronograma}"
+                plano_negocios = gerar_plano_negocios(texto_edital, palavras_chave, conteudo_anterior, descricao_solucao)
+                todas_etapas['plano_negocios'] = plano_negocios
+                
+                # Etapa 6: Recursos e Impactos
+                st.write("🛠️ Especificando recursos necessários e impactos...")
+                conteudo_anterior = f"{conteudo_anterior}\n\n{plano_negocios}"
+                recursos_impactos = gerar_recursos_impactos(texto_edital, palavras_chave, conteudo_anterior, descricao_solucao)
+                todas_etapas['recursos_impactos'] = recursos_impactos
+                
+                # Etapa 7: Conclusão
+                st.write("🔚 Finalizando com conclusão persuasiva...")
+                conteudo_anterior = f"{conteudo_anterior}\n\n{recursos_impactos}"
+                conclusao = gerar_conclusao(texto_edital, palavras_chave, conteudo_anterior, descricao_solucao)
+                todas_etapas['conclusao'] = conclusao
+                
+                status.update(label="Proposta completa gerada!", state="complete")
+            
+            # Montar proposta completa
+            proposta_completa = f"""
+            {todas_etapas['titulo_resumo']}
+            
+            ## JUSTIFICATIVA E INOVAÇÃO
+            {todas_etapas['justificativa']}
+            
+            ## OBJETIVOS E METODOLOGIA
+            {todas_etapas['objetivos_metodologia']}
+            
+            ## CRONOGRAMA DE IMPLEMENTAÇÃO
+            {todas_etapas['cronograma']}
+            
+            ## PLANO DE NEGÓCIOS
+            {todas_etapas['plano_negocios']}
+            
+            ## RECURSOS NECESSÁRIOS E IMPACTOS ESPERADOS
+            {todas_etapas['recursos_impactos']}
+            
+            ## CONCLUSÃO
+            {todas_etapas['conclusao']}
             """
             
-            resultado_busca = buscar_editais_com_web_search(
-                descricao_completa, 
-                palavras_chave, 
-                area_solucao, 
-                inovacao_solucao
-            )
+            # Exibir resultados
+            st.success("✅ Proposta gerada com sucesso!")
             
-            st.success("✅ Busca de editais concluída!")
-            st.subheader("📋 Editais Encontrados")
-            st.markdown(resultado_busca)
-
-    # Restante do código para geração da proposta (mantido como antes)
-    if gerar_proposta and gemini_api_key:
-        # Obter texto do edital
-        texto_edital = ""
-        
-        if uploaded_file is not None:
-            with st.spinner("Processando arquivo do edital..."):
-                texto_edital = extract_text_from_file(uploaded_file)
-                if not texto_edital.strip():
-                    st.error("Não foi possível extrair texto do arquivo. Tente outro formato ou use a opção de texto manual.")
-                    st.stop()
-        elif texto_manual.strip():
-            texto_edital = texto_manual
-        else:
-            st.error("Por favor, faça upload de um edital ou cole o texto manualmente.")
-            st.stop()
-        
-        # Gerar proposta em etapas
-        todas_etapas = {}
-        
-        with st.status("Gerando proposta passo a passo...", expanded=True) as status:
-            # Preparar descrição da solução do usuário
-            descricao_solucao = f"""
-            NOME: {nome_solucao}
-            ÁREA: {area_solucao}
-            PROBLEMA RESOLVIDO: {problema_resolve}
-            COMO FUNCIONA: {como_funciona}
-            INOVAÇÃO: {inovacao_solucao}
-            BENEFÍCIOS: {beneficios}
-            """
+            col1, col2 = st.columns(2)
             
-            # Etapa 1: Título e Resumo
-            st.write("🎯 Gerando título e resumo executivo...")
-            titulo_resumo = gerar_titulo_resumo(texto_edital, palavras_chave, diretrizes_usuario, area_atuacao, descricao_solucao)
-            todas_etapas['titulo_resumo'] = titulo_resumo
+            with col1:
+                st.subheader("📊 Metadados da Proposta")
+                st.info(f"**Título:** {titulo_proposta}")
+                st.info(f"**Área de Atuação:** {area_atuacao}")
+                st.info(f"**Palavras-chave:** {palavras_chave}")
+                
+                # Botão para copiar texto
+                st.download_button(
+                    label="📥 Download da Proposta",
+                    data=proposta_completa,
+                    file_name=f"proposta_edital_{titulo_proposta.lower().replace(' ', '_')[:30]}.txt",
+                    mime="text/plain"
+                )
             
-            # Extrair título para usar no nome do documento
-            titulo_match = re.search(r'TÍTULO:\s*(.+)', titulo_resumo, re.IGNORECASE)
-            titulo_proposta = titulo_match.group(1).strip() if titulo_match else f"Proposta para Edital de Inovação em {area_atuacao}"
+            with col2:
+                st.subheader("🎯 Diretrizes Aplicadas")
+                st.success(f"**Área de Foco:** {area_atuacao}")
+                st.success(f"**Palavras-chave:** {palavras_chave}")
+                if diretrizes_usuario.strip():
+                    st.success(f"**Diretrizes:** {diretrizes_usuario}")
             
-            # Etapa 2: Justificativa
-            st.write("📝 Desenvolvendo justificativa e inovação...")
-            justificativa = gerar_justificativa(texto_edital, palavras_chave, titulo_resumo, descricao_solucao, inovacao_solucao)
-            todas_etapas['justificativa'] = justificativa
+            st.divider()
             
-            # ... (continuar com as outras etapas)
+            # Abas para visualizar cada seção
+            tabs = st.tabs(["Título e Resumo", "Justificativa", "Objetivos e Metodologia", 
+                           "Cronograma", "Plano de Negócios", "Recursos e Impactos", "Conclusão", "Proposta Completa"])
             
-            status.update(label="Proposta completa gerada!", state="complete")
-        
-        # Montar e exibir proposta completa
-        st.success("✅ Proposta gerada com sucesso!")
-        # ... (restante do código de exibição)
+            with tabs[0]:
+                st.markdown(todas_etapas['titulo_resumo'])
+            with tabs[1]:
+                st.markdown(todas_etapas['justificativa'])
+            with tabs[2]:
+                st.markdown(todas_etapas['objetivos_metodologia'])
+            with tabs[3]:
+                st.markdown(todas_etapas['cronograma'])
+            with tabs[4]:
+                st.markdown(todas_etapas['plano_negocios'])
+            with tabs[5]:
+                st.markdown(todas_etapas['recursos_impactos'])
+            with tabs[6]:
+                st.markdown(todas_etapas['conclusao'])
+            with tabs[7]:
+                st.markdown(proposta_completa)
+            
+            # Salvar no MongoDB se conectado
+            if mongo_connected:
+                if salvar_no_mongo(titulo_proposta, area_atuacao, palavras_chave, texto_edital, todas_etapas):
+                    st.sidebar.success("✅ Proposta salva no banco de dados!")
 
 elif not gemini_api_key:
     st.warning("⚠️ Por favor, insira uma API Key válida do Gemini para gerar propostas.")
