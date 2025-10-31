@@ -89,20 +89,20 @@ if gemini_api_key:
         )
         
         prompt = f'''
-        Busque especificamente por EDITAIS ABERTOS DA CEMIG (Companhia Energética de Minas Gerais) 
-        no programa PEQuI 2024-2028:
+        Busque especificamente por EDITAIS ABERTOS TANTO NO BRASIL COMO INTERNACIONAIS
+        
 
         DESCRIÇÃO DA SOLUÇÃO: {descricao_solucao}
         ÁREA DE ATUAÇÃO: {area_atuacao}
         ELEMENTOS INOVADORES: {inovacao}
         PALAVRAS-CHAVE: {palavras_chave}
 
-        Foque em encontrar editais ativos da CEMIG/PEQuI.
+        Foque em encontrar editais ativos
         '''
         
         try:
             response = client.models.generate_content(
-                model="gemini-2.0-flash-exp",
+                model="gemini-2.5-flash",
                 contents=prompt,
                 config=config
             )
@@ -138,7 +138,7 @@ if gemini_api_key:
         '''
         
         response = client.models.generate_content(
-            model="gemini-2.0-flash-exp",
+            model="gemini-2.5-flash",
             contents=prompt_analise
         )
         
@@ -180,7 +180,7 @@ if gemini_api_key:
         Retorne APENAS o título.
         '''
         response = client.models.generate_content(
-            model="gemini-2.0-flash-exp",
+            model="gemini-2.5-flash",
             contents=prompt_titulo
         )
         proposta_cemig['titulo'] = response.text.strip()[:200]
@@ -193,7 +193,7 @@ if gemini_api_key:
         NOME: [nome resumido do desafio]
         '''
         response = client.models.generate_content(
-            model="gemini-2.0-flash-exp",
+            model="gemini-2.5-flash",
             contents=prompt_desafio
         )
         proposta_cemig['desafio_info'] = response.text
@@ -205,7 +205,7 @@ if gemini_api_key:
         Retorne APENAS: TE1, TE2, TE3, TE4, TE5, TE6, ou TE7
         '''
         response = client.models.generate_content(
-            model="gemini-2.0-flash-exp",
+            model="gemini-2.5-flash",
             contents=prompt_tema
         )
         proposta_cemig['tema_estrategico'] = response.text.strip()
@@ -217,7 +217,7 @@ if gemini_api_key:
         Retorne APENAS o número.
         '''
         response = client.models.generate_content(
-            model="gemini-2.0-flash-exp",
+            model="gemini-2.5-flash",
             contents=prompt_duracao
         )
         proposta_cemig['duracao_meses'] = response.text.strip()
@@ -238,7 +238,7 @@ if gemini_api_key:
         STARTUPS: 0
         '''
         response = client.models.generate_content(
-            model="gemini-2.0-flash-exp",
+            model="gemini-2.5-flash",
             contents=prompt_orcamento
         )
         proposta_cemig['orcamento'] = response.text
@@ -252,7 +252,7 @@ if gemini_api_key:
         Retorne APENAS: "Nacional - No setor elétrico Brasileiro"
         '''
         response = client.models.generate_content(
-            model="gemini-2.0-flash-exp",
+            model="gemini-2.5-flash",
             contents=prompt_alcance
         )
         proposta_cemig['alcance'] = response.text.strip()
@@ -267,7 +267,7 @@ if gemini_api_key:
         TECNOLOGIAS: {dados_solucao['tecnologias_previstas']}
         '''
         response = client.models.generate_content(
-            model="gemini-2.0-flash-exp",
+            model="gemini-2.5-flash",
             contents=prompt_ambito
         )
         proposta_cemig['ambito_aplicacao'] = response.text
@@ -286,7 +286,7 @@ if gemini_api_key:
         Retorne APENAS o título.
         '''
         response = client.models.generate_content(
-            model="gemini-2.0-flash-exp",
+            model="gemini-2.5-flash",
             contents=prompt_titulo
         )
         proposta_cemig['titulo'] = response.text.strip()[:200]
