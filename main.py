@@ -548,7 +548,7 @@ if gemini_api_key:
                 tecnologias_previstas = st.text_area(
                     "Tecnologias previstas:",
                     height=80,
-                    placeholder "IA, IoT, blockchain, sensores, plataformas digitais..."
+                    placeholder= "IA, IoT, blockchain, sensores, plataformas digitais..."
                 )
                 
                 tipo_produto = st.text_input(
