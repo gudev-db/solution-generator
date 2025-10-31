@@ -15,7 +15,7 @@ st.set_page_config(page_title="Gerador de Propostas CEMIG", page_icon="⚡", lay
 
 # Título do aplicativo
 st.title("⚡ Gerador de Propostas para Editais CEMIG - PEQuI 2024-2028")
-st.markdown("Encontre editais da CEMIG e gere propostas completas seguindo o formato oficial")
+st.markdown("Descreva o desafio da CEMIG e gere automaticamente uma solução completa no formato oficial")
 
 # Configuração do Gemini API
 gemini_api_key = st.secrets.get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY"))
@@ -37,119 +37,81 @@ if gemini_api_key:
             mongo_connected = False
     except:
         mongo_connected = False
-        st.warning("Conexão com MongoDB não configurada. As propostas não serão salvas.")
 
-    # Função para extrair texto de arquivos
-    def extract_text_from_file(uploaded_file):
-        text = ""
-        file_type = uploaded_file.type
-        
-        if file_type == "application/pdf":
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-                tmp_file.write(uploaded_file.getvalue())
-                tmp_file_path = tmp_file.name
-            
-            try:
-                with open(tmp_file_path, "rb") as file:
-                    pdf_reader = PyPDF2.PdfReader(file)
-                    for page in pdf_reader.pages:
-                        text += page.extract_text() + "\n"
-            except Exception as e:
-                st.error(f"Erro ao ler PDF: {e}")
-            finally:
-                os.unlink(tmp_file_path)
-                
-        elif file_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as tmp_file:
-                tmp_file.write(uploaded_file.getvalue())
-                tmp_file_path = tmp_file.name
-            
-            try:
-                doc = docx.Document(tmp_file_path)
-                for paragraph in doc.paragraphs:
-                    text += paragraph.text + "\n"
-            except Exception as e:
-                st.error(f"Erro ao ler DOCX: {e}")
-            finally:
-                os.unlink(tmp_file_path)
-                
-        else:
-            text = str(uploaded_file.getvalue(), "utf-8")
-        
-        return text
-
-    # Função para buscar editais CEMIG específicos
-    def buscar_editais_cemig(descricao_solucao, palavras_chave, area_atuacao, inovacao):
-        grounding_tool = types.Tool(
-            google_search=types.GoogleSearch()
-        )
-        
-        config = types.GenerateContentConfig(
-            tools=[grounding_tool],
-            temperature=0.3
-        )
-        
-        prompt = f'''
-        Busque especificamente por EDITAIS ABERTOS DA CEMIG (Companhia Energética de Minas Gerais) 
-        no programa PEQuI 2024-2028 que sejam adequados para esta solução:
-
-        DESCRIÇÃO DA SOLUÇÃO: {descricao_solucao}
-        ÁREA DE ATUAÇÃO: {area_atuacao}
-        ELEMENTOS INOVADORES: {inovacao}
-        PALAVRAS-CHAVE: {palavras_chave}
-
-        Foque em encontrar:
-        1. Editais ativos da CEMIG/PEQuI para 2024-2025
-        2. Desafios específicos com códigos identificadores
-        3. Prazos de submissão
-        4. Requisitos específicos da CEMIG
-        5. Links oficiais no site da CEMIG
-
-        Priorize informações do site oficial da CEMIG: www.cemig.com.br
-        '''
-        
-        try:
-            response = client.models.generate_content(
-                model="gemini-2.0-flash",
-                contents=prompt,
-                config=config
-            )
-            
-            resultado = response.text
-            
-            if hasattr(response, 'candidates') and response.candidates:
-                candidate = response.candidates[0]
-                if hasattr(candidate, 'grounding_metadata'):
-                    resultado += "\n\n---\n**FONTES E REFERÊNCIAS OFICIAIS:**\n"
-                    if hasattr(candidate.grounding_metadata, 'grounding_chunks'):
-                        for i, chunk in enumerate(candidate.grounding_metadata.grounding_chunks[:5]):
-                            if hasattr(chunk, 'web') and hasattr(chunk.web, 'uri'):
-                                resultado += f"\n{i+1}. {chunk.web.uri}"
-            
-            return resultado
-            
-        except Exception as e:
-            return f"Erro na busca: {str(e)}"
-
-    # Função para gerar proposta específica para CEMIG
-    def gerar_proposta_cemig_completa(desafio_cemig, dados_solucao):
-        """Gera proposta completa no formato específico da CEMIG"""
+    # Função para gerar proposta CEMIG completa apenas com o desafio
+    def gerar_proposta_cemig_automatica(desafio_cemig):
+        """Gera proposta completa automaticamente baseada apenas no desafio"""
         
         proposta_cemig = {}
         
-        # 4. Título da proposta (máx 200 caracteres)
-        prompt_titulo = f'''
-        Com base no desafio da CEMIG e na solução proposta, crie um TÍTULO criativo e impactante 
-        com NO MÁXIMO 200 CARACTERES.
+        # Primeiro, analisar o desafio e gerar uma solução inovadora
+        prompt_analise_desafio = f'''
+        ANALISE este desafio da CEMIG e gere uma SOLUÇÃO INOVADORA completa:
 
         DESAFIO CEMIG:
         {desafio_cemig}
 
-        SOLUÇÃO: {dados_solucao['descricao_solucao']}
-        INOVAÇÃO: {dados_solucao['aspectos_inovativos']}
-        ÁREA: {dados_solucao['area_atuacao']}
+        Com base nisso, crie uma solução tecnológica inovadora para o setor elétrico que inclua:
+        1. Descrição técnica detalhada da solução
+        2. Elementos inovadores e diferenciais
+        3. Tecnologias envolvidas
+        4. Tipo de produto resultante
+        5. Potencial de aplicação no setor elétrico
 
-        Retorne APENAS o título, sem formatação adicional.
+        Retorne no formato:
+        DESCRICAO_SOLUCAO: [descrição completa]
+        INOVACAO: [aspectos inovadores]
+        TECNOLOGIAS: [tecnologias utilizadas]
+        TIPO_PRODUTO: [tipo de produto]
+        POTENCIAL_MERCADO: [potencial de aplicação]
+        '''
+        
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt_analise_desafio
+        )
+        
+        # Processar a resposta para extrair os componentes
+        resposta_analise = response.text
+        linhas = resposta_analise.split('\n')
+        
+        dados_solucao = {}
+        for linha in linhas:
+            if 'DESCRICAO_SOLUCAO:' in linha:
+                dados_solucao['descricao_solucao'] = linha.split('DESCRICAO_SOLUCAO:')[1].strip()
+            elif 'INOVACAO:' in linha:
+                dados_solucao['aspectos_inovativos'] = linha.split('INOVACAO:')[1].strip()
+            elif 'TECNOLOGIAS:' in linha:
+                dados_solucao['tecnologias_previstas'] = linha.split('TECNOLOGIAS:')[1].strip()
+            elif 'TIPO_PRODUTO:' in linha:
+                dados_solucao['tipo_produto'] = linha.split('TIPO_PRODUTO:')[1].strip()
+            elif 'POTENCIAL_MERCADO:' in linha:
+                dados_solucao['potencial_mercado'] = linha.split('POTENCIAL_MERCADO:')[1].strip()
+        
+        # Se não conseguiu extrair, usar a resposta completa
+        if not dados_solucao.get('descricao_solucao'):
+            dados_solucao['descricao_solucao'] = resposta_analise
+        
+        # Preencher dados padrão baseados na análise do desafio
+        dados_solucao['area_atuacao'] = "Tecnologia para Setor Elétrico"
+        dados_solucao['complexidade'] = "Alta"
+        dados_solucao['tamanho_equipe'] = "8"
+        dados_solucao['maturidade_tecnologica'] = "Protótipo Avançado"
+        dados_solucao['trl_inicial'] = "TRL4"
+        dados_solucao['trl_final'] = "TRL7"
+        dados_solucao['propriedade_intelectual'] = "Potencial para patente devido aos aspectos inovadores da solução"
+        dados_solucao['estado_desenvolvimento'] = "Conceito validado, pronto para desenvolvimento de protótipo"
+        
+        # Agora gerar cada item do formulário CEMIG
+        
+        # 4. Título da proposta (máx 200 caracteres)
+        prompt_titulo = f'''
+        Com base no desafio e solução, crie um TÍTULO criativo e impactante (máx 200 caracteres):
+
+        DESAFIO: {desafio_cemig}
+        SOLUÇÃO: {dados_solucao['descricao_solucao'][:500]}
+
+        Retorne APENAS o título.
         '''
         
         response = client.models.generate_content(
@@ -158,18 +120,16 @@ if gemini_api_key:
         )
         proposta_cemig['titulo'] = response.text.strip()[:200]
         
-        # Extrair código e nome do desafio automaticamente
+        # 15-16. Código e nome do desafio
         prompt_desafio = f'''
-        Analise este desafio da CEMIG e extraia:
-        1. Código do desafio (se mencionado)
-        2. Nome completo do desafio
+        Extraia informações do desafio CEMIG:
 
-        DESAFIO:
         {desafio_cemig}
 
-        Retorne no formato:
-        CÓDIGO: [código ou "A ser definido"]
-        NOME: [nome do desafio]
+        Se houver código, extraia. Caso contrário, sugira um código apropriado.
+        Retorne:
+        CÓDIGO: [código ou CEMIG-PEQ-2024-XXX]
+        NOME: [nome resumido do desafio]
         '''
         
         response = client.models.generate_content(
@@ -179,29 +139,14 @@ if gemini_api_key:
         proposta_cemig['desafio_info'] = response.text
         
         # 17. Tema estratégico
-        temas_estrategicos = [
-            "TE1: Modernização e Modicidade Tarifária",
-            "TE2: Eletrificação da Economia e Eficiência Energética", 
-            "TE3: Inovações para Transmissão e Distribuição e Novas Tecnologias de Suporte – Inteligência Artificial, Realidade Virtual e Aumentada e Blockchain",
-            "TE4: Digitalização, Padrões, Interoperabilidade e Cibersegurança",
-            "TE5: Eletricidade de Baixo Carbono",
-            "TE6: Armazenamento de Energia", 
-            "TE7: Hidrogênio",
-            "A proposta não está alinhada a nenhum tema estratégico",
-            "Outra"
-        ]
-        
         prompt_tema = f'''
-        Analise a solução proposta e o desafio da CEMIG, e indique qual TEMA ESTRATÉGICO do PEQuI 2024-2028 melhor se aplica.
+        Analise o desafio e solução e indique o TEMA ESTRATÉGICO do PEQuI 2024-2028:
 
         DESAFIO: {desafio_cemig}
-        SOLUÇÃO: {dados_solucao['descricao_solucao']}
-        INOVAÇÃO: {dados_solucao['aspectos_inovativos']}
-        
-        Temas disponíveis:
-        {chr(10).join(temas_estrategicos)}
+        SOLUÇÃO: {dados_solucao['descricao_solucao'][:500]}
 
-        Retorne APENAS o código do tema (ex: "TE1", "TE2", etc)
+        Temas: TE1, TE2, TE3, TE4, TE5, TE6, TE7
+        Retorne APENAS o código do tema (ex: "TE3").
         '''
         
         response = client.models.generate_content(
@@ -212,14 +157,14 @@ if gemini_api_key:
         
         # 18. Duração do projeto
         prompt_duracao = f'''
-        Estime a duração realista em MESES para executar este projeto de P&D considerando:
-        - Complexidade da solução: {dados_solucao['complexidade']}
-        - TRL inicial/final: {dados_solucao['trl_inicial']} para {dados_solucao['trl_final']}
-        - Escopo do desafio: {desafio_cemig[:500]}
-        - Descrição da solução: {dados_solucao['descricao_solucao'][:500]}
+        Estime duração realista em MESES para este projeto de P&D:
 
-        Para projetos de P&D na área de energia, a duração típica é de 12-36 meses.
-        Retorne APENAS o número de meses (ex: "18")
+        DESAFIO: {desafio_cemig[:300]}
+        SOLUÇÃO: {dados_solucao['descricao_solucao'][:300]}
+        COMPLEXIDADE: {dados_solucao['complexidade']}
+
+        Para P&D no setor elétrico, considere 12-24 meses.
+        Retorne APENAS o número.
         '''
         
         response = client.models.generate_content(
@@ -230,23 +175,19 @@ if gemini_api_key:
         
         # 19-27. Orçamento detalhado
         prompt_orcamento = f'''
-        Calcule estimativas REALISTAS de custos para um projeto de P&D na área de energia elétrica:
+        Calcule orçamento REALISTA para projeto CEMIG:
 
-        DESAFIO: {desafio_cemig}
-        SOLUÇÃO: {dados_solucao['descricao_solucao']}
+        SOLUÇÃO: {dados_solucao['descricao_solucao'][:400]}
         DURAÇÃO: {proposta_cemig['duracao_meses']} meses
         COMPLEXIDADE: {dados_solucao['complexidade']}
-        TAMANHO EQUIPE: {dados_solucao['tamanho_equipe']} pessoas
-        TIPO PRODUTO: {dados_solucao['tipo_produto']}
+        EQUIPE: {dados_solucao['tamanho_equipe']} pessoas
 
-        Forneça valores REALISTAS em R$ considerando:
-        - Projetos CEMIG typically variam de R$ 500.000 a R$ 5.000.000
-        - Distribuição típica: 40-60% RH, 20-30% equipamentos, 10-20% outros
-        - Inclua contrapartidas
+        Valores típicos CEMIG: R$ 500.000 - R$ 2.000.000
+        Distribuição: 50% RH, 20% equipamentos, 15% serviços, 15% outros
 
-        Retorne APENAS os números no formato:
+        Retorne APENAS números no formato:
         TOTAL: [valor]
-        RH: [valor]
+        RH: [valor] 
         MATERIAL_PERMANENTE: [valor]
         MATERIAL_CONSUMO: [valor]
         SERVICOS_TERCEIROS: [valor]
@@ -263,61 +204,24 @@ if gemini_api_key:
         proposta_cemig['orcamento'] = response.text
         
         # 28. Tecnologias utilizadas
-        prompt_tecnologias = f'''
-        Liste as principais tecnologias que serão utilizadas no desenvolvimento deste projeto de P&D:
-
-        DESAFIO: {desafio_cemig}
-        SOLUÇÃO: {dados_solucao['descricao_solucao']}
-        FOCO TECNOLÓGICO: {dados_solucao['tecnologias_previstas']}
-
-        Seja específico e técnico. Inclua tecnologias como:
-        - IoT, IA, Machine Learning, Blockchain
-        - Sensores, drones, robótica
-        - Plataformas digitais, software específico
-        - Materiais avançados, componentes elétricos
-        '''
-        
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt_tecnologias
-        )
-        proposta_cemig['tecnologias'] = response.text
+        proposta_cemig['tecnologias'] = dados_solucao['tecnologias_previstas']
         
         # 29. Tipo de produto
-        prompt_produto = f'''
-        Especifique o tipo de produto que será desenvolvido (Software, Hardware, Planta piloto, Sistema, etc)
-        em NO MÁXIMO 255 CARACTERES.
-
-        DESAFIO: {desafio_cemig}
-        SOLUÇÃO: {dados_solucao['descricao_solucao']}
-
-        Seja específico sobre o produto final.
-        '''
-        
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt_produto
-        )
-        proposta_cemig['tipo_produto'] = response.text.strip()[:255]
+        proposta_cemig['tipo_produto'] = dados_solucao['tipo_produto'][:255]
         
         # 30. Alcance previsto
-        alcance_opcoes = [
-            "Local - Na empresa",
-            "Nacional - No setor elétrico Brasileiro", 
-            "Internacional - No setor elétrico Mundial",
-            "Diversificado - Abrangência em mais de um setor"
-        ]
-        
         prompt_alcance = f'''
-        Determine o alcance previsto realista da solução:
+        Determine alcance desta solução:
 
-        DESAFIO: {desafio_cemig}
-        SOLUÇÃO: {dados_solucao['descricao_solucao']}
+        SOLUÇÃO: {dados_solucao['descricao_solucao'][:400]}
         POTENCIAL: {dados_solucao['potencial_mercado']}
 
-        Opções: {alcance_opcoes}
+        Opções:
+        - Local - Na empresa
+        - Nacional - No setor elétrico Brasileiro  
+        - Internacional - No setor elétrico Mundial
+        - Diversificado - Abrangência em mais de um setor
 
-        Considere o potencial de aplicação no setor elétrico brasileiro.
         Retorne APENAS a opção completa.
         '''
         
@@ -328,78 +232,27 @@ if gemini_api_key:
         proposta_cemig['alcance'] = response.text.strip()
         
         # 31-32. TRL Inicial e Final
-        trl_opcoes = ["TRL1", "TRL2", "TRL3", "TRL4", "TRL5", "TRL6", "TRL7", "TRL8", "TRL9"]
-        
-        prompt_trl = f'''
-        Determine o TRL inicial realista e o TRL final esperado para esta solução:
-
-        DESAFIO: {desafio_cemig}
-        SOLUÇÃO: {dados_solucao['descricao_solucao']}
-        ESTADO ATUAL: {dados_solucao['estado_desenvolvimento']}
-        MATURIDADE: {dados_solucao['maturidade_tecnologica']}
-
-        Para projetos CEMIG, TRL inicial típico: 3-5, TRL final: 6-8
-        Retorne no formato:
-        TRL_INICIAL: [valor]
-        TRL_FINAL: [valor]
-        '''
-        
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt_trl
-        )
-        proposta_cemig['trl'] = response.text
+        proposta_cemig['trl'] = f"TRL_INICIAL: {dados_solucao['trl_inicial']}\nTRL_FINAL: {dados_solucao['trl_final']}"
         
         # 33. Propriedade intelectual
-        prompt_pi = f'''
-        Com base na solução proposta, descreva aspectos de propriedade intelectual:
-
-        SOLUÇÃO: {dados_solucao['descricao_solucao']}
-        INOVAÇÃO: {dados_solucao['aspectos_inovativos']}
-        {dados_solucao['propriedade_intelectual']}
-
-        Se não houver PI pré-existente, descreva o potencial para patentes ou registros.
-        Limite: 1000 caracteres.
-        '''
-        
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt_pi
-        )
-        proposta_cemig['propriedade_intelectual'] = response.text.strip()[:1000]
+        proposta_cemig['propriedade_intelectual'] = dados_solucao['propriedade_intelectual'][:1000]
         
         # 34. Aspectos inovativos
-        prompt_inovacao = f'''
-        Descreva os ASPECTOS INOVATIVOS da solução em NO MÁXIMO 1000 CARACTERES.
-        Destaque o que diferencia da concorrência e do estado da arte.
-
-        DESAFIO: {desafio_cemig}
-        SOLUÇÃO: {dados_solucao['descricao_solucao']}
-        DIFERENCIAIS: {dados_solucao['aspectos_inovativos']}
-
-        Foque em inovação tecnológica e aplicabilidade no setor elétrico.
-        '''
-        
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt_inovacao
-        )
-        proposta_cemig['aspectos_inovativos'] = response.text.strip()[:1000]
+        proposta_cemig['aspectos_inovativos'] = dados_solucao['aspectos_inovativos'][:1000]
         
         # 35. Âmbito de aplicação
         prompt_ambito = f'''
-        Descreva o POTENCIAL DE ADOÇÃO E UTILIZAÇÃO da solução no setor elétrico, incluindo:
-        - Extensão da aplicação
-        - Segmentos beneficiados  
-        - Setor econômico
-        - Número potencial de usuários/consumidores
-        - Benefícios gerados para a CEMIG e setor
+        Descreva o âmbito de aplicação detalhado:
 
-        DESAFIO: {desafio_cemig}
-        SOLUÇÃO: {dados_solucao['descricao_solucao']}
-        MERCADO: {dados_solucao['potencial_mercado']}
+        SOLUÇÃO: {dados_solucao['descricao_solucao'][:500]}
+        TECNOLOGIAS: {dados_solucao['tecnologias_previstas']}
+        POTENCIAL: {dados_solucao['potencial_mercado']}
 
-        Seja específico sobre o impacto no setor elétrico.
+        Inclua:
+        - Setores beneficiados
+        - Número potencial de usuários
+        - Impacto no setor elétrico
+        - Benefícios para CEMIG
         '''
         
         response = client.models.generate_content(
@@ -408,7 +261,7 @@ if gemini_api_key:
         )
         proposta_cemig['ambito_aplicacao'] = response.text
         
-        return proposta_cemig
+        return proposta_cemig, dados_solucao
 
     # Função para salvar no MongoDB
     def salvar_no_mongo(proposta_cemig, desafio_cemig):
@@ -419,344 +272,196 @@ if gemini_api_key:
                 "desafio": desafio_cemig[:500],
                 "proposta_completa": proposta_cemig,
                 "data_criacao": datetime.now(),
-                "tema_estrategico": proposta_cemig.get('tema_estrategico', ''),
-                "duracao_meses": proposta_cemig.get('duracao_meses', ''),
-                "tipo_produto": proposta_cemig.get('tipo_produto', '')
+                "tema_estrategico": proposta_cemig.get('tema_estrategico', '')
             }
             collection.insert_one(documento)
             return True
         return False
 
-    # Abas separadas para cada funcionalidade
-    tab1, tab2, tab3 = st.tabs(["🔍 Buscar Editais CEMIG", "📝 Gerar Proposta", "⚡ Formato CEMIG"])
+    # Interface principal simplificada
+    st.header("⚡ Gerador Automático de Propostas CEMIG")
+    st.markdown("**Cole o desafio da CEMIG abaixo e gere automaticamente uma proposta completa**")
 
-    with tab1:
-        st.header("🔍 Buscar Editais CEMIG")
-        st.markdown("Encontre editais ativos da CEMIG alinhados com sua solução")
+    with st.form("form_cemig_automatico"):
+        desafio_cemig = st.text_area(
+            "**Desafio da CEMIG:**",
+            height=200,
+            placeholder="Cole aqui o texto completo do desafio específico da CEMIG...\n\nExemplo: Desenvolvimento de sistema de monitoramento preditivo para ativos de distribuição utilizando inteligência artificial e IoT para prever falhas e otimizar manutenção..."
+        )
         
-        with st.form("form_busca_cemig"):
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                nome_solucao = st.text_input("Nome da Solução:", placeholder="Ex: Sistema IoT para Monitoramento de Subestações")
-                area_solucao = st.selectbox("Área de Aplicação:", [
-                    "Distribuição de Energia", "Transmissão", "Geração", "Eficiência Energética", 
-                    "Smart Grid", "Digitalização", "Energias Renováveis", "Armazenamento", "Outra"
-                ])
-                problema_resolve = st.text_area("Problema que Resolve:", placeholder="Descreva o problema no setor elétrico que sua solução aborda")
-            
-            with col2:
-                como_funciona = st.text_area("Como Funciona:", placeholder="Explique brevemente como sua solução funciona")
-                inovacao_solucao = st.text_area("O que tem de Inovador:", placeholder="Descreva os aspectos inovadores para o setor elétrico")
-                beneficios = st.text_area("Benefícios para CEMIG:", placeholder="Quais benefícios sua solução traz para a CEMIG")
-            
-            palavras_chave_busca = st.text_input("Palavras-chave para busca:", "CEMIG, PEQuI, P&D, energia elétrica, inovação")
-            
-            submitted_busca = st.form_submit_button("🔍 Buscar Editais CEMIG", type="primary")
-        
-        if submitted_busca and gemini_api_key:
-            with st.spinner("Buscando editais ativos da CEMIG..."):
-                descricao_completa = f"""
-                NOME: {nome_solucao}
-                ÁREA: {area_solucao}
-                PROBLEMA RESOLVIDO: {problema_resolve}
-                COMO FUNCIONA: {como_funciona}
-                INOVAÇÃO: {inovacao_solucao}
-                BENEFÍCIOS CEMIG: {beneficios}
-                """
-                
-                resultado_busca = buscar_editais_cemig(
-                    descricao_completa, 
-                    palavras_chave_busca, 
-                    area_solucao, 
-                    inovacao_solucao
-                )
-                
-                st.success("✅ Busca de editais CEMIG concluída!")
-                st.subheader("📋 Editais CEMIG Encontrados")
-                st.markdown(resultado_busca)
+        submitted = st.form_submit_button("🚀 Gerar Proposta Completa", type="primary")
 
-    with tab2:
-        st.header("📝 Gerar Proposta para Edital")
-        st.markdown("Faça upload de um edital específico para gerar uma proposta completa")
+    if submitted and gemini_api_key:
+        if not desafio_cemig.strip():
+            st.error("Por favor, cole o desafio da CEMIG.")
+            st.stop()
         
-        with st.form("form_gerar_proposta"):
-            uploaded_file = st.file_uploader("Faça upload do edital (PDF, DOCX ou TXT):", 
-                                            type=["pdf", "docx", "txt"])
+        with st.spinner("🤖 Analisando o desafio e gerando solução inovadora..."):
+            proposta_cemig, dados_solucao = gerar_proposta_cemig_automatica(desafio_cemig)
             
-            area_atuacao = st.selectbox("Área de Atuação Principal:", [
-                "Distribuição de Energia", "Transmissão", "Geração", "Eficiência Energética", 
-                "Smart Grid", "Digitalização", "Energias Renováveis", "Armazenamento", "Outra"
+            st.success("✅ Proposta CEMIG gerada automaticamente!")
+            
+            # Exibir resumo da solução gerada
+            st.subheader("💡 Solução Proposta (Gerada Automaticamente)")
+            st.info(f"**Título:** {proposta_cemig.get('titulo', '')}")
+            st.write(f"**Descrição:** {dados_solucao.get('descricao_solucao', '')}")
+            st.write(f"**Inovação:** {dados_solucao.get('aspectos_inovativos', '')}")
+            
+            # Exibir proposta completa em formato organizado
+            st.subheader("📋 Proposta CEMIG - PEQuI 2024-2028")
+            
+            # Criar abas para cada seção
+            tabs_cemig = st.tabs([
+                "4. Título", "15-16. Desafio", "17. Tema", "18. Duração", 
+                "19-27. Orçamento", "28. Tecnologias", "29. Produto", "30. Alcance",
+                "31-32. TRL", "33. PI", "34. Inovação", "35. Âmbito"
             ])
             
-            palavras_chave = st.text_area("Palavras-chave (separadas por vírgula):", 
-                                         "inovação, tecnologia, eficiência energética, smart grid, digitalização")
+            with tabs_cemig[0]:
+                st.info(f"**Título da Proposta:**")
+                st.code(proposta_cemig.get('titulo', ''), language=None)
+                st.metric("Caracteres", len(proposta_cemig.get('titulo', '')))
             
-            diretrizes_usuario = st.text_area("Diretrizes ou Ideias Preliminares:", 
-                                             "Ex: Focar em soluções de IoT para monitoramento remoto. Incluir parceria com universidades.")
+            with tabs_cemig[1]:
+                st.info("**Informações do Desafio:**")
+                st.text_area("", proposta_cemig.get('desafio_info', ''), height=100, key="desafio_info")
             
-            texto_manual = st.text_area("Ou cole o texto do edital manualmente:", height=200)
+            with tabs_cemig[2]:
+                tema = proposta_cemig.get('tema_estrategico', 'Não definido')
+                st.info(f"**Tema Estratégico:** {tema}")
+                if tema.startswith('TE'):
+                    st.success(f"✅ Alinhado com {tema}")
             
-            submitted_proposta = st.form_submit_button("🚀 Gerar Proposta Completa", type="primary")
-        
-        if submitted_proposta and gemini_api_key:
-            texto_edital = ""
+            with tabs_cemig[3]:
+                duracao = proposta_cemig.get('duracao_meses', 'Não definido')
+                st.info(f"**Duração do Projeto:** {duracao} meses")
+                st.metric("Duração Estimada", f"{duracao} meses")
             
-            if uploaded_file is not None:
-                with st.spinner("Processando arquivo do edital..."):
-                    texto_edital = extract_text_from_file(uploaded_file)
-                    if not texto_edital.strip():
-                        st.error("Não foi possível extrair texto do arquivo. Tente outro formato ou use a opção de texto manual.")
-                        st.stop()
-            elif texto_manual.strip():
-                texto_edital = texto_manual
-            else:
-                st.error("Por favor, faça upload de um edital ou cole o texto manualmente.")
-                st.stop()
+            with tabs_cemig[4]:
+                st.info("**Orçamento Detalhado:**")
+                orcamento_texto = proposta_cemig.get('orcamento', '')
+                linhas_orcamento = orcamento_texto.split('\n')
+                for linha in linhas_orcamento:
+                    if ':' in linha:
+                        chave, valor = linha.split(':', 1)
+                        valor_limpo = valor.strip()
+                        if valor_limpo.replace(',', '').replace('.', '').isdigit():
+                            st.metric(label=chave.strip(), value=f"R$ {valor_limpo}")
+                        else:
+                            st.write(f"**{chave.strip()}:** {valor_limpo}")
             
-            # [Código existente para geração de proposta padrão...]
-            # (Manter o código existente da tab2)
-
-    with tab3:
-        st.header("⚡ Formulário CEMIG - PEQuI 2024-2028")
-        st.markdown("Preencha os dados da sua solução para gerar uma proposta no formato oficial da CEMIG")
-        
-        with st.form("form_cemig"):
-            st.subheader("Desafio CEMIG")
-            desafio_cemig = st.text_area(
-                "Cole aqui o texto do desafio específico da CEMIG:",
-                height=150,
-                placeholder="Ex: Desenvolvimento de sistema de monitoramento inteligente para subestações utilizando IoT e IA..."
+            with tabs_cemig[5]:
+                st.info("**Tecnologias Utilizadas:**")
+                tecnologias = proposta_cemig.get('tecnologias', '')
+                st.write(tecnologias)
+                # Destacar tecnologias chave
+                tech_keywords = ['IA', 'IoT', 'blockchain', 'machine learning', 'cloud', 'sensor', 'digital']
+                for keyword in tech_keywords:
+                    if keyword.lower() in tecnologias.lower():
+                        st.success(f"✅ {keyword.upper()} incluído")
+            
+            with tabs_cemig[6]:
+                produto = proposta_cemig.get('tipo_produto', '')
+                st.info(f"**Tipo de Produto:** {produto}")
+                st.metric("Caracteres", len(produto))
+            
+            with tabs_cemig[7]:
+                alcance = proposta_cemig.get('alcance', '')
+                st.info(f"**Alcance Previsto:** {alcance}")
+                if "Nacional" in alcance or "Internacional" in alcance:
+                    st.success("🎯 Alto potencial de impacto")
+            
+            with tabs_cemig[8]:
+                st.info("**Níveis TRL:**")
+                trl_text = proposta_cemig.get('trl', '')
+                st.write(trl_text)
+                if "TRL4" in trl_text and "TRL7" in trl_text:
+                    st.success("📈 Evolução tecnológica significativa")
+            
+            with tabs_cemig[9]:
+                st.info("**Propriedade Intelectual:**")
+                pi_text = proposta_cemig.get('propriedade_intelectual', '')
+                st.text_area("", pi_text, height=150, key="pi")
+                st.metric("Caracteres", len(pi_text))
+            
+            with tabs_cemig[10]:
+                st.info("**Aspectos Inovativos:**")
+                inovacao_text = proposta_cemig.get('aspectos_inovativos', '')
+                st.text_area("", inovacao_text, height=150, key="inovacao")
+                st.metric("Caracteres", len(inovacao_text))
+            
+            with tabs_cemig[11]:
+                st.info("**Âmbito de Aplicação:**")
+                ambito_text = proposta_cemig.get('ambito_aplicacao', '')
+                st.write(ambito_text)
+            
+            # Botão de download
+            proposta_completa_texto = f"""
+            PROPOSTA CEMIG - PEQuI 2024-2028
+            =================================
+            Gerado automaticamente em {datetime.now().strftime("%d/%m/%Y %H:%M")}
+            
+            SOLUÇÃO GERADA AUTOMATICAMENTE:
+            {dados_solucao.get('descricao_solucao', '')}
+            
+            INOVAÇÃO:
+            {dados_solucao.get('aspectos_inovativos', '')}
+            
+            4. TÍTULO DA PROPOSTA:
+            {proposta_cemig.get('titulo', '')}
+            
+            15-16. DESAFIO:
+            {proposta_cemig.get('desafio_info', '')}
+            
+            17. TEMA ESTRATÉGICO:
+            {proposta_cemig.get('tema_estrategico', '')}
+            
+            18. DURAÇÃO DO PROJETO:
+            {proposta_cemig.get('duracao_meses', '')} meses
+            
+            19-27. ORÇAMENTO:
+            {proposta_cemig.get('orcamento', '')}
+            
+            28. TECNOLOGIAS UTILIZADAS:
+            {proposta_cemig.get('tecnologias', '')}
+            
+            29. TIPO DE PRODUTO:
+            {proposta_cemig.get('tipo_produto', '')}
+            
+            30. ALCANCE PREVISTO:
+            {proposta_cemig.get('alcance', '')}
+            
+            31-32. TRL INICIAL/FINAL:
+            {proposta_cemig.get('trl', '')}
+            
+            33. PROPRIEDADE INTELECTUAL:
+            {proposta_cemig.get('propriedade_intelectual', '')}
+            
+            34. ASPECTOS INOVATIVOS:
+            {proposta_cemig.get('aspectos_inovativos', '')}
+            
+            35. ÂMBITO DE APLICAÇÃO:
+            {proposta_cemig.get('ambito_aplicacao', '')}
+            """
+            
+            st.download_button(
+                label="📥 Download da Proposta Completa",
+                data=proposta_completa_texto,
+                file_name=f"proposta_cemig_auto_{datetime.now().strftime('%Y%m%d_%H%M')}.txt",
+                mime="text/plain",
+                type="primary"
             )
             
-            st.subheader("Informações da Solução")
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                descricao_solucao = st.text_area(
-                    "Descrição detalhada da solução:",
-                    height=120,
-                    placeholder="Descreva como sua solução funciona, componentes, tecnologia..."
-                )
-                
-                aspectos_inovativos = st.text_area(
-                    "Aspectos inovativos (para item 34):",
-                    height=100,
-                    placeholder="O que torna sua solução inovadora em relação ao estado da arte..."
-                )
-                
-                tecnologias_previstas = st.text_area(
-                    "Tecnologias previstas:",
-                    height=80,
-                    placeholder= "IA, IoT, blockchain, sensores, plataformas digitais..."
-                )
-                
-                tipo_produto = st.text_input(
-                    "Tipo de produto (item 29):",
-                    placeholder="Ex: Software de gestão, hardware IoT, planta piloto..."
-                )
-            
-            with col2:
-                estado_desenvolvimento = st.text_area(
-                    "Estado atual de desenvolvimento:",
-                    height=80,
-                    placeholder="Conceito, protótipo, MVP, produto em teste..."
-                )
-                
-                complexidade = st.select_slider(
-                    "Complexidade do projeto:",
-                    options=["Baixa", "Média", "Alta", "Muito Alta"]
-                )
-                
-                tamanho_equipe = st.slider(
-                    "Tamanho estimado da equipe:",
-                    min_value=1,
-                    max_value=20,
-                    value=5
-                )
-                
-                maturidade_tecnologica = st.selectbox(
-                    "Maturidade tecnológica atual:",
-                    ["Conceito", "Protótipo Inicial", "Protótipo Avançado", "MVP", "Produto em Teste"]
-                )
-            
-            st.subheader("Parâmetros Técnicos")
-            col3, col4 = st.columns(2)
-            
-            with col3:
-                trl_inicial = st.selectbox(
-                    "TRL Inicial (item 31):",
-                    ["TRL1", "TRL2", "TRL3", "TRL4", "TRL5", "TRL6", "TRL7", "TRL8", "TRL9"],
-                    index=2
-                )
-                
-                trl_final = st.selectbox(
-                    "TRL Final esperado (item 32):",
-                    ["TRL1", "TRL2", "TRL3", "TRL4", "TRL5", "TRL6", "TRL7", "TRL8", "TRL9"],
-                    index=6
-                )
-            
-            with col4:
-                propriedade_intelectual = st.text_area(
-                    "Propriedade intelectual (item 33):",
-                    height=80,
-                    placeholder="Patentes existentes, registros, ou potencial para novos..."
-                )
-                
-                potencial_mercado = st.text_area(
-                    "Potencial de mercado:",
-                    height=80,
-                    placeholder="Estimativa de usuários, aplicabilidade, escalabilidade..."
-                )
-            
-            submitted_cemig = st.form_submit_button("⚡ Gerar Proposta CEMIG", type="primary")
-        
-        if submitted_cemig and gemini_api_key:
-            if not desafio_cemig.strip():
-                st.error("Por favor, insira o texto do desafio da CEMIG.")
-                st.stop()
-            
-            # Preparar dados da solução
-            dados_solucao = {
-                'descricao_solucao': descricao_solucao,
-                'aspectos_inovativos': aspectos_inovativos,
-                'area_atuacao': area_atuacao,
-                'tecnologias_previstas': tecnologias_previstas,
-                'tipo_produto': tipo_produto,
-                'estado_desenvolvimento': estado_desenvolvimento,
-                'complexidade': complexidade,
-                'tamanho_equipe': tamanho_equipe,
-                'maturidade_tecnologica': maturidade_tecnologica,
-                'trl_inicial': trl_inicial,
-                'trl_final': trl_final,
-                'propriedade_intelectual': propriedade_intelectual,
-                'potencial_mercado': potencial_mercado
-            }
-            
-            with st.spinner("Gerando proposta no formato CEMIG..."):
-                proposta_cemig = gerar_proposta_cemig_completa(desafio_cemig, dados_solucao)
-                
-                st.success("✅ Proposta CEMIG gerada com sucesso!")
-                
-                # Exibir resultados em formato organizado
-                st.subheader("📋 Proposta CEMIG - PEQuI 2024-2028")
-                
-                # Criar abas para cada seção
-                tabs_cemig = st.tabs([
-                    "4. Título", "15-16. Desafio", "17. Tema", "18. Duração", 
-                    "19-27. Orçamento", "28. Tecnologias", "29. Produto", "30. Alcance",
-                    "31-32. TRL", "33. PI", "34. Inovação", "35. Âmbito"
-                ])
-                
-                with tabs_cemig[0]:
-                    st.info(f"**Título da Proposta:** {proposta_cemig.get('titulo', 'Não gerado')}")
-                    st.code(proposta_cemig.get('titulo', ''), language=None)
-                
-                with tabs_cemig[1]:
-                    st.info("**Informações do Desafio:**")
-                    st.text_area("", proposta_cemig.get('desafio_info', ''), height=100)
-                
-                with tabs_cemig[2]:
-                    st.info(f"**Tema Estratégico:** {proposta_cemig.get('tema_estrategico', 'Não definido')}")
-                
-                with tabs_cemig[3]:
-                    st.info(f"**Duração do Projeto:** {proposta_cemig.get('duracao_meses', 'Não definido')} meses")
-                
-                with tabs_cemig[4]:
-                    st.info("**Orçamento Detalhado:**")
-                    orcamento_texto = proposta_cemig.get('orcamento', '')
-                    # Formatar orçamento
-                    linhas_orcamento = orcamento_texto.split('\n')
-                    for linha in linhas_orcamento:
-                        if ':' in linha:
-                            chave, valor = linha.split(':', 1)
-                            st.metric(label=chave.strip(), value=f"R$ {valor.strip()}")
-                
-                with tabs_cemig[5]:
-                    st.info("**Tecnologias Utilizadas:**")
-                    st.write(proposta_cemig.get('tecnologias', ''))
-                
-                with tabs_cemig[6]:
-                    st.info(f"**Tipo de Produto:** {proposta_cemig.get('tipo_produto', '')}")
-                
-                with tabs_cemig[7]:
-                    st.info(f"**Alcance Previsto:** {proposta_cemig.get('alcance', '')}")
-                
-                with tabs_cemig[8]:
-                    st.info("**Níveis TRL:**")
-                    st.write(proposta_cemig.get('trl', ''))
-                
-                with tabs_cemig[9]:
-                    st.info("**Propriedade Intelectual:**")
-                    st.text_area("", proposta_cemig.get('propriedade_intelectual', ''), height=150)
-                
-                with tabs_cemig[10]:
-                    st.info("**Aspectos Inovativos:**")
-                    st.text_area("", proposta_cemig.get('aspectos_inovativos', ''), height=150)
-                
-                with tabs_cemig[11]:
-                    st.info("**Âmbito de Aplicação:**")
-                    st.write(proposta_cemig.get('ambito_aplicacao', ''))
-                
-                # Botão de download
-                proposta_completa_texto = f"""
-                PROPOSTA CEMIG - PEQuI 2024-2028
-                =================================
-                
-                4. TÍTULO DA PROPOSTA:
-                {proposta_cemig.get('titulo', '')}
-                
-                15-16. DESAFIO:
-                {proposta_cemig.get('desafio_info', '')}
-                
-                17. TEMA ESTRATÉGICO:
-                {proposta_cemig.get('tema_estrategico', '')}
-                
-                18. DURAÇÃO DO PROJETO:
-                {proposta_cemig.get('duracao_meses', '')} meses
-                
-                19-27. ORÇAMENTO:
-                {proposta_cemig.get('orcamento', '')}
-                
-                28. TECNOLOGIAS UTILIZADAS:
-                {proposta_cemig.get('tecnologias', '')}
-                
-                29. TIPO DE PRODUTO:
-                {proposta_cemig.get('tipo_produto', '')}
-                
-                30. ALCANCE PREVISTO:
-                {proposta_cemig.get('alcance', '')}
-                
-                31-32. TRL INICIAL/FINAL:
-                {proposta_cemig.get('trl', '')}
-                
-                33. PROPRIEDADE INTELECTUAL:
-                {proposta_cemig.get('propriedade_intelectual', '')}
-                
-                34. ASPECTOS INOVATIVOS:
-                {proposta_cemig.get('aspectos_inovativos', '')}
-                
-                35. ÂMBITO DE APLICAÇÃO:
-                {proposta_cemig.get('ambito_aplicacao', '')}
-                """
-                
-                st.download_button(
-                    label="📥 Download Proposta CEMIG",
-                    data=proposta_completa_texto,
-                    file_name=f"proposta_cemig_{proposta_cemig.get('titulo', 'proposta')[:30].replace(' ', '_')}.txt",
-                    mime="text/plain"
-                )
-                
-                # Salvar no MongoDB
-                if salvar_no_mongo(proposta_cemig, desafio_cemig):
-                    st.sidebar.success("✅ Proposta CEMIG salva no banco de dados!")
+            # Salvar no MongoDB
+            if salvar_no_mongo(proposta_cemig, desafio_cemig):
+                st.sidebar.success("✅ Proposta salva no banco de dados!")
 
 elif not gemini_api_key:
     st.warning("⚠️ Por favor, insira uma API Key válida do Gemini para gerar propostas.")
 
 else:
-    st.info("🔑 Para começar, insira sua API Key do Gemini na barra lateral.")
+    st.info("🔑 Para começar, insira sua API Key do Gemini acima.")
 
 # Rodapé
 st.divider()
-st.caption("⚡ Gerador de Propostas CEMIG - Desenvolvido para o programa PEQuI 2024-2028")
+st.caption("⚡ Gerador Automático de Propostas CEMIG - Desenvolvido para o programa PEQuI 2024-2028")
