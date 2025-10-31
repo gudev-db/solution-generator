@@ -132,6 +132,9 @@ if gemini_api_key:
         INOVACAO: [aspectos inovadores]
         TECNOLOGIAS: [tecnologias utilizadas]
         TIPO_PRODUTO: [tipo de produto]
+
+        Não seja hipotético, seja preciso e decidido no que será feito.
+        Foque em implementações que envolvam IA
         '''
         
         response = client.models.generate_content(
